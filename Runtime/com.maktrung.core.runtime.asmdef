@@ -1,0 +1,26 @@
+{
+    "name": "com.maktrung.core.runtime",
+    "rootNamespace": "Core",
+    "references": [
+        "Unity.Addressables",
+        "Unity.ResourceManager",
+        "Unity.Addressables.Editor",
+        "VContainer",
+        "VContainer.Editor",
+        "UniTask",
+        "UniTask.Addressables",
+        "UniTask.DOTween",
+        "UniTask.Editor",
+        "UniTask.TextMeshPro",
+        "UniTask.Linq"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,0 +1,45 @@
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class ContextData
+{
+    public string Name;
+
+    public string Path;
+}
+
+public static class ContextHandler 
+{
+
+    static Dictionary<int, SceneSO> _contextDict = new Dictionary<int, SceneSO>();
+
+    public static void AddContext(int contextKey, string contextName, string path)
+    {
+        _contextDict.Add(contextKey, new ContextData { Name = contextName, Path = path });
+    }
+
+    public static string GetContextName(int contextKey)
+    {
+        if(!_contextDict.ContainsKey(contextKey))
+        {
+            Debug.LogError(contextKey + "is not exist.");
+            return string.Empty;
+        }
+
+        return _contextDict[contextKey].Name;
+    }
+
+    public static string GetContextPath(int contextKey)
+    {
+        if (!_contextDict.ContainsKey(contextKey))
+        {
+            Debug.LogError(contextKey + "is not exist.");
+            return string.Empty;
+        }
+
+        return _contextDict[contextKey].Path;
+    }
+}
+
+
