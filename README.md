@@ -1,185 +1,529 @@
-Absolutely! Below is the **comprehensive and professional English documentation** for your Unity Framework, formatted to be both internal technical docs and onboarding-friendly for new team members.
-
----
-
-# Unity Game Framework Documentation
+# Core Framework for Unity
 
 ## Table of Contents
 
-1. [Architecture Overview](#architecture)
-2. [Core Components](#components)
-    - GameHub
-    - BaseSystem
-    - Audio System
-3. [Lifecycle & State Management](#lifecycle)
-4. [Extending & Applying to Real Projects](#extension)
-5. [Game Interruption Handling](#interruption)
-6. [REST API Integration (BestHTTP)](#rest-api)
-7. [Operational Notes & Best Practices](#notes)
+1. [Features](#features)
+2. [Installation](#installation)
+3. [Getting Started](#getting-started)
+4. [Core Components](#core-components)
+5. [Lifecycle & State Management](#lifecycle)
+6. [Usage Examples](#usage-examples)
+7. [Advanced Features](#advanced-features)
+8. [Best Practices](#best-practices)
+9. [API Reference](#api-reference)
 
 ---
 
-<a name="architecture"></a>
-## 1. Architecture Overview
+## Features
 
-This modular Unity framework is designed for scalability and clean maintainability.  
-Core systems are well-isolated and can be re-used or expanded in any game project.
-
-- **GameHub:** The single main entry point, responsible for initializing, pausing/resuming, and coordinating all BaseSystems and SceneManager.
-- **BaseSystem:** Abstract base class for game systems (audio, data, gameplay, etc.), providing unified lifecycle hooks (Initialize, OnPause, OnResume, etc.).
-- **Audio System:** Manages music, ambient, SFX (with pooling, fade, playlists, events).
-- **Unified lifecycle:** All systems are managed through OnLoaded, OnUnloaded, OnPause, OnResume and other standard lifecycle methods.
-- **Plug-and-play REST API layer via BestHTTP**, ready for networked/game service requirements.
-
----
-
-<a name="components"></a>
-## 2. Core Components
-
-### a. GameHub
-
-- Root MonoBehaviour; **only one instance** should exist in the root scene.
-- Manages targetFrameRate, sleep timeout (Android), and the system group (`_gameSystemGroup`).
-- Controls pausing/resuming the whole game, and hooks into `OnApplicationPause`.
-
-**Typical methods:**
-- `EnterPoint()`: Initializes BaseSystems and SceneManager.
-- `PauseGame()/ResumeGame()`: Directly pauses/unpauses all systems via BaseSystem hooks.
-- `OnGamePause`: Global event other systems or UI may subscribe to.
-
-### b. BaseSystem
-
-- Base class (extending MonoBehaviour) for all systems.
-- Provides **virtual methods** for all main lifecycle events:  
-  - `Initialize()`
-  - `OnLoaded()`, `OnUnloaded()`, `OnPreUnloaded()`
-  - `OnPause()`, `OnResume()`
-- To add new behavior, simply subclass and override the relevant methods.
-
-### c. Audio System
-
-- Separates out music, ambient, and SFX; pools sources as appropriate.
-- ScriptableObject (`AudioAsset`) holds all audio metadata (volume, pitch, fade, etc.).
-- Automatic pausing/resuming of all audio sources during game pause/resume.
-- Fade in/out, playlists, randomization, and callback events are supported.
+- ✅ **Modular Architecture**: Clean separation of concerns with BaseSystem pattern
+- ✅ **Lifecycle Management**: Unified initialization, pause/resume, and cleanup
+- ✅ **Audio System**: Complete audio management with pooling, fade effects, and playlists
+- ✅ **Scene Management**: Additive scene loading with custom scene controllers
+- ✅ **Asset Management**: Addressables-based asset loading and management
+- ✅ **Dependency Injection**: VContainer integration for clean dependency management
+- ✅ **Object Pooling**: Efficient object reuse for performance optimization
+- ✅ **UI Management**: View-based UI system with stacking and lifecycle
+- ✅ **Input Handling**: Centralized input management system
+- ✅ **Data Management**: Game definition and local data persistence
+- ✅ **State Machine**: Flexible state management system
+- ✅ **Startup Tasks**: Dependency-based initialization system
+- ✅ **Game Events**: Decoupled communication system
+- ✅ **Network Support**: Built-in REST API wrapper with async/await
 
 ---
 
-<a name="lifecycle"></a>
-## 3. Lifecycle & State Management
+## Installation
 
-- **On startup:**  
-    1. GameHub sets framerate, initializes all BaseSystems in the designated group.
-    2. SceneManager coordinates initial scene loading and broadcasts events to all systems.
-- **On scene load/unload/pre-unload:**  
-    - Triggers OnLoaded/OnUnloaded/OnPreUnloaded in every BaseSystem.
-- **On pause/resume (app background/foreground, manual pause, etc.):**  
-    - GameHub invokes OnPause/OnResume on *all* BaseSystems, synchronizing state across audio, gameplay, data, networking, etc.
+### Prerequisites
 
-**Goal:**  
-Guaranteed, unified handling of all systems during any lifecycle transition, to prevent resource leaks or state corruption.
+- Unity 2021.3 or later
+- Git installed on your system
 
----
+### Step 1: Install Required Dependencies
 
-<a name="extension"></a>
-## 4. Extending & Applying in Any Game
+The package requires the following Unity packages:
+- Addressables (2.3.16+)
+- Newtonsoft Json (2.0.2+)
+- Unitask
+- VContainer (dependency injection)
 
-### ✓ To add custom functionality for your game, simply:
+### Step 2: Install Core Framework
 
-1. **Create a system inheriting from BaseSystem:**
+**Option A: Via Git URL (Recommended)**
 
-    ```csharp
-    using Core;
-    public class MyGameDataSystem : BaseSystem
-    {
-        public override void OnPause()
-        {
-            // Save data, trigger save, clean up, etc.
-        }
-        public override void OnResume()
-        {
-            // Restore state, update UI, reload data if needed
-        }
-    }
-    ```
+1. Open `Window` → `Package Manager`
+2. Click `+` → `Add package from git URL`
+3. Enter: `https://github.com/trungmk/unity_casual_template.git#master`
 
-2. **Add this system to the `_gameSystemGroup`** in your scene (or register via Dependency Injection if advanced).
+**Option B: Manual Installation**
 
-3. **Let the framework handle all lifecycle events automatically!**
-    - OnPause/OnResume and other methods will be called without manual setup.
-
-4. **UI or special cases:**  
-    Hook into `GameHub.OnGamePause` for popups or custom UI states as needed.
+1. Find folder `your_project\Packages\`, then open file `manifest.json`
+2. add "com.maktrung.core" : "https://github.com/trungmk/unity_casual_template.git#master" into  `manifest.json` file.
+3. The package will be automatically detected by Unity
 
 ---
 
-<a name="interruption"></a>
-## 5. Handling Game Interruptions (Minimize/Switch App/Incoming Calls)
+## Getting Started
 
-### **Unified Flow:**
-- Whenever Unity's `OnApplicationPause` is triggered (minimize, OS context switch, phone call, etc.), or if you manually call PauseGame/ResumeGame:
-    1. **GameHub** triggers OnPause/OnResume on all BaseSystems (including Audio, Data, Gameplay, Network, etc.).
-    2. **Each system is responsible for its logic:**
-        - AudioSystem: Pauses/unpauses music and SFX.
-        - DataSystem: Saves checkpoint/progress to be robust against RAM kill.
-        - NetworkSystem: Ends online sessions, re-establishes on resume.
-        - Gameplay: Halts or freezes time, AI, as appropriate.
-    3. For data integrity, saving on Pause is **highly recommended**, since mobile OS may kill the process without notice.
+### Basic Setup
 
-#### ***Best Practices:***
-- Always override OnPause/OnResume in any system that manages critical state.
-- Ensure all important systems are under `_gameSystemGroup` (or connected for auto-lifecycle handling).
-- With coroutines/long-running effects, check whether they must be stopped completely on pause or simply resume where they left off.
-- UI overlays or popups can listen to `OnGamePause` for showing and hiding accordingly.
+1. **Create a Root Scene**:
+   - This will be your main entry point
+   - Setup whole game systems, UIManager in this scene.
 
----
+2. **Add GameHub**:
+   ```csharp
+   // Create an empty GameObject and add GameHub component
+   // GameHub manages the entire framework lifecycle
+   ```
 
-<a name="rest-api"></a>
-## 6. REST API Integration (BestHTTP)
+3. **Setup Scene Structure**:
+   ```
+   Root Scene
+   ├── GameHub (GameHub component)
+   ├── Global Systems (Empty GameObject)
+   │   ├── AudioManager
+   │   ├── AssetManager
+   │   └── [Other Systems]
+   └── SceneManager (CoreSceneManager component)
+   └── UIManager
+   ```
 
-### **Universal REST API Wrapper (GET/POST, async/await):**
+### Quick Start Example
+
 ```csharp
-public class RestApiService
+using Core;
+using UnityEngine;
+
+// Create a custom system for your game
+public class MyGameSystem : BaseSystem
 {
-    public async Task<T> GetAsync<T>(string endpoint, Dictionary<string, string> headers = null) {...}
-    public async Task<T> PostAsync<T>(string endpoint, object body, Dictionary<string, string> headers = null) {...}
+    public override void Initialize()
+    {
+        Debug.Log("MyGameSystem initialized!");
+    }
+
+    public override void OnLoaded()
+    {
+        Debug.Log("Scene loaded, system ready!");
+    }
+
+    public override void OnPause()
+    {
+        Debug.Log("Game paused, saving data...");
+        // Save critical game state here
+    }
+
+    public override void OnResume()
+    {
+        Debug.Log("Game resumed!");
+    }
 }
 ```
-**How to use:**
+
+---
+
+## Core Components
+
+### GameHub
+The central coordinator that manages all systems and lifecycle events.
+
+**Key Features:**
+- Single entry point for the entire application
+- Manages system initialization and lifecycle
+- Handles application pause/resume events
+- Controls target framerate and screen timeout
+
+### BaseSystem
+Abstract base class for all game systems providing unified lifecycle management.
+
+**Lifecycle Methods:**
+- `Initialize()`: Called once during system setup
+- `OnLoaded()`: Called when a scene finishes loading
+- `OnPreUnloaded()`: Called before scene unloading begins
+- `OnUnloaded()`: Called after scene is unloaded  
+- `OnPause()`: Called when game is paused
+- `OnResume()`: Called when game is resumed
+
+### AudioManager
+Comprehensive audio system with pooling, fade effects, and categorized playback.
+
+**Features:**
+- Separate music and sound effect channels
+- Audio source pooling for performance
+- Fade in/out effects with callbacks
+- Playlist support with randomization
+- Automatic pause/resume handling
+
+**Usage:**
 ```csharp
-var api = new RestApiService("https://api-endpoint.com/api/");
-// GET profile
-UserProfile profile = await api.GetAsync<UserProfile>("user/profile");
-// POST login
-LoginResponse login = await api.PostAsync<LoginResponse>("auth/login", new { username="u", password="p" });
+// Play a sound effect
+audioManager.PlaySound(soundClip, pitch: 1.0f, volume: 0.8f);
+
+// Play background music with fade
+audioManager.PlayMusic(AudioClipType.MusicBackground, musicClip, volume: 0.7f);
+
+### AssetManager
+Addressables-based asset loading and management system.
+
+**Features:**
+- Async/await asset loading
+- Automatic handle management
+- Label-based batch loading
+- Dependency injection support
+- Catalog updating capabilities
+
+**Usage:**
+```csharp
+// Load a single asset
+var texture = await assetManager.LoadAssetAsync<Texture2D>("MyTexture");
+
+// Load multiple assets by label
+var audioClips = await assetManager.LoadAssetsAsyncByLabel<AudioClip>("Music");
+
+// Instantiate with DI injection
+var instance = await assetManager.InstantiateWithInjectAsync("PlayerPrefab");
 ```
-- Can be easily extended for PUT, DELETE, etc.
-- Supports JSON (use LitJson, Unity's JsonUtility, or Newtonsoft.Json).
-- Clean async/await for robust error handling and integration with game state.
+
+### UIManager
+View-based UI system with stacking, caching, and lifecycle management.
+
+**Features:**
+- View stack management
+- Automatic caching and reuse
+- Dependency injection for UI components
+- Show/hide callbacks and events
+- Multi-layer UI support
+
+**Usage:**
+```csharp
+// Show a UI view
+uiManager.Show<MainMenuView>()
+         .OnShowing(() => Debug.Log("Showing main menu"))
+         .OnShown(() => Debug.Log("Main menu shown"));
+
+// Hide a view
+uiManager.Hide<MainMenuView>();
+
+// Show with parameters
+uiManager.Show<InventoryView>(playerData, itemList);
+```
+
+### CoreSceneManager
+Additive scene loading system with custom scene controllers.
+
+**Features:**
+- Additive scene loading
+- Scene controller pattern
+- Scene transition callbacks
+- ScriptableObject-based scene configuration
+- Automatic lifecycle event broadcasting
 
 ---
 
-<a name="notes"></a>
-## 7. Operational Notes & Best Practices
+## Lifecycle & State Management
 
-- **Always save critical game/data state on OnPause**, as mobile OS may terminate the app at any time when backgrounded.
-- **Verify all important components are children of `_gameSystemGroup`** (for correct lifecycle handling).
-- **Mind long-running coroutines/network actions:**  
-   On resume, check for timeouts, re-authenticate or reconnect as necessary.
-- **Organize Audio and Data Managers** using pooling or singleton architectures for optimal performance.
-- **Document every custom system** and its role for maintainability and ease of onboarding.
+The framework provides a unified lifecycle management system:
+
+### Startup Flow
+1. **GameHub** initializes with target framerate settings
+2. All **BaseSystems** in the system group are initialized
+3. **CoreSceneManager** loads the initial scene
+4. Scene-specific **SceneController** takes over
+5. All systems receive `OnLoaded()` callback
+
+### Scene Transitions
+1. `OnPreUnloaded()` called on all systems
+2. Current scene unloaded
+3. `OnUnloaded()` called on all systems  
+4. New scene loaded additively
+5. `OnLoaded()` called on all systems
+
+### Pause/Resume Flow
+- **Application pause** (minimize, phone call, etc.)
+- **Manual pause** via `GameHub.PauseGame()`
+- All systems receive `OnPause()`/`OnResume()` callbacks
+- Audio automatically pauses/resumes
+- Perfect for saving critical state
 
 ---
 
-## **Summary**
+## Usage Examples
 
-- **Robust, modular startup and lifecycle system:** All systems are neatly initialized and paused/resumed in sync.
-- **Easy extension:** Custom systems are simply added via BaseSystem inheritance and scene/DI registration.
-- **Bulletproof interruption handling:** Audio, Data, and other systems operate safely through all state transitions.
-- **Ready-to-package:** Structure is suitable for packaging as a Unity package for instant re-use.
-- **REST API support built-in:** Async, extensible, plugs into game systems with minimal boilerplate.
+### Creating a Custom Data System
+
+```csharp
+using Core;
+using UnityEngine;
+
+public class PlayerDataSystem : BaseSystem
+{
+    [SerializeField] private PlayerData playerData;
+    
+    public override void Initialize()
+    {
+        LoadPlayerData();
+    }
+    
+    public override void OnPause()
+    {
+        // Save player data when game is paused
+        SavePlayerData();
+    }
+    
+    private void LoadPlayerData()
+    {
+        // Load from PlayerPrefs, file, or remote server
+        playerData = LoadFromStorage();
+    }
+    
+    private void SavePlayerData()
+    {
+        // Save to persistent storage
+        SaveToStorage(playerData);
+    }
+}
+```
+
+### Setting Up Audio with Categories
+
+```csharp
+public class GameAudioController : MonoBehaviour
+{
+    [SerializeField] private AudioClip backgroundMusic;
+    [SerializeField] private AudioClip buttonSound;
+    
+    private IAudioManager audioManager;
+    
+    private void Start()
+    {
+        audioManager = FindObjectOfType<AudioManager>();
+        
+        // Start background music
+        audioManager.PlayMusic(AudioClipType.MusicBackground, backgroundMusic, 0.6f);
+    }
+    
+    public void OnButtonClick()
+    {
+        // Play UI sound effect
+        audioManager.PlaySound(buttonSound, 1.0f, 0.8f);
+    }
+}
+```
+
+### Creating a Scene Controller
+
+```csharp
+using Core;
+
+public class MainMenuController : SceneController
+{
+    public override void Initialize()
+    {
+        Debug.Log("Main Menu scene initialized");
+        // Setup main menu specific logic
+    }
+    
+    public override void UpdateContext(float deltaTime)
+    {
+        // Update main menu logic
+    }
+    
+    public override void ChangeGameToPause(bool isPause)
+    {
+        // Handle pause state for main menu
+        if (isPause)
+        {
+            // Show pause overlay
+        }
+        else
+        {
+            // Hide pause overlay
+        }
+    }
+}
+```
+
+### Using the Startup Task System
+
+```csharp
+[CreateAssetMenu(fileName = "InitializeAudioTask", menuName = "Startup Tasks/Initialize Audio")]
+public class InitializeAudioTask : StartupTaskBase
+{
+    public override void Execute()
+    {
+        Debug.Log("Initializing audio system...");
+        
+        // Simulate async initialization
+        StartCoroutine(InitializeAsync());
+    }
+    
+    private IEnumerator InitializeAsync()
+    {
+        yield return new WaitForSeconds(1f);
+        
+        HasCompleted = true;
+        Debug.Log("Audio system initialized!");
+    }
+}
+```
 
 ---
 
-If you need sample templates for custom ScriptableObjects, DI/IOC integration patterns, or onboarding guides/checklists for new developers, feel free to ask!  
-You can use this docs format for both internal handbooks and onboarding or public technical references.
+## Advanced Features
+
+### Dependency Injection with VContainer
+
+```csharp
+// Register services in LifetimeScope
+public class GameLifetimeScope : LifetimeScope
+{
+    protected override void Configure(IContainerBuilder builder)
+    {
+        builder.Register<IPlayerService, PlayerService>(Lifetime.Singleton);
+        builder.Register<IGameDataService, GameDataService>(Lifetime.Singleton);
+    }
+}
+
+// Inject dependencies in your systems
+public class GameplaySystem : BaseSystem
+{
+    private IPlayerService playerService;
+    private IGameDataService gameDataService;
+    
+    [Inject]
+    public void Construct(IPlayerService player, IGameDataService gameData)
+    {
+        playerService = player;
+        gameDataService = gameData;
+    }
+}
+```
+
+### Game Events for Decoupled Communication
+
+```csharp
+// Define event types
+public class PlayerLevelUpEvent : IGameEvent
+{
+    public int NewLevel { get; set; }
+    public int ExperienceGained { get; set; }
+}
+
+// Publishing events
+public class PlayerController : MonoBehaviour
+{
+    private IEventManager eventManager;
+    
+    public void LevelUp()
+    {
+        eventManager.Publish(new PlayerLevelUpEvent 
+        { 
+            NewLevel = currentLevel + 1,
+            ExperienceGained = 1000
+        });
+    }
+}
+
+// Subscribing to events
+public class UIController : MonoBehaviour
+{
+    private IEventManager eventManager;
+    
+    private void Start()
+    {
+        eventManager.Subscribe<PlayerLevelUpEvent>(OnPlayerLevelUp);
+    }
+    
+    private void OnPlayerLevelUp(PlayerLevelUpEvent eventData)
+    {
+        ShowLevelUpNotification(eventData.NewLevel);
+    }
+}
+```
+
+### Object Pooling
+
+```csharp
+public class ProjectileSystem : MonoBehaviour
+{
+    private IObjectPooling objectPooling;
+    
+    [Inject]
+    public void Construct(IObjectPooling pooling)
+    {
+        objectPooling = pooling;
+    }
+    
+    public void FireProjectile()
+    {
+        // Get projectile from pool
+        var projectile = objectPooling.Get("Bullet");
+        
+        // Configure and fire
+        projectile.transform.position = firePoint.position;
+        projectile.GetComponent<Projectile>().Fire(target);
+    }
+}
+```
+
+---
+
+## Best Practices
+
+### Performance
+- Use object pooling for frequently created/destroyed objects
+- Leverage async/await for asset loading
+- Cache references to avoid repeated GetComponent calls
+- Save critical data on pause, not just on quit
+
+### Memory Management
+- Release asset handles when no longer needed
+- Use WeakReference for cached objects when appropriate
+- Unsubscribe from events in OnDestroy/OnDisable
+
+### Error Handling
+- Always check for null references in lifecycle methods
+- Use try-catch blocks for asset loading operations
+- Implement fallback behaviors for missing assets
+- Log meaningful error messages with context
+
+---
+
+## API Reference
+
+### Core Interfaces
+
+- `IAssetManager`: Asset loading and management
+- `IAudioManager`: Audio playback and control
+- `IUIManager`: UI view management
+- `ISceneManager`: Scene loading and transitions
+- `IGameDataManager`: Game data and persistence
+- `IObjectPooling`: Object pooling and reuse
+- `IEventManager`: Event publishing and subscription
+
+### Key Classes
+
+- `GameHub`: Main framework coordinator
+- `BaseSystem`: Base class for all game systems
+- `SceneController`: Base class for scene-specific logic
+- `StartupTaskBase`: Base class for initialization tasks
+- `BaseView`: Base class for UI views
+
+For detailed API documentation, see the inline XML documentation in the source code.
+
+---
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Support
+
+- **Email**: maktrung@gmail.com
+- **Documentation**: [Wiki](https://github.com/yourusername/core-framework/wiki)
+
+---
+
+**Made with ❤️ for the Unity community**
