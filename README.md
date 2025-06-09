@@ -199,15 +199,16 @@ View-based UI system with stacking, caching, and lifecycle management.
 **Usage:**
 ```csharp
 // Show a UI view
-uiManager.Show<MainMenuView>()
-         .OnShowing(() => Debug.Log("Showing main menu"))
-         .OnShown(() => Debug.Log("Main menu shown"));
+uiManager.Show<MainMenuPanel>(mainMenuData)
+         .OnShowCompleted(view => {
+
+         });
 
 // Hide a view
-uiManager.Hide<MainMenuView>();
+uiManager.Hide<MainMenuPanel>();
 
 // Show with parameters
-uiManager.Show<InventoryView>(playerData, itemList);
+uiManager.Show<MainMenuPanel>(playerData, itemList);
 ```
 
 ### CoreSceneManager
@@ -522,7 +523,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Support
 
 - **Email**: maktrung@gmail.com
-- **Documentation**: [Wiki](https://github.com/yourusername/core-framework/wiki)
+- **Documentation**: [Wiki](https://github.com/trungmk/unity_casual_template/wiki)
 
 ---
 
