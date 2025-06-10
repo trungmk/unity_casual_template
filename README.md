@@ -1,4 +1,4 @@
-# Core Framework for Unity
+# Template Framework for Unity (Casual Games)
 
 ## Table of Contents
 
@@ -44,9 +44,9 @@
 
 The package requires the following Unity packages:
 - Addressables (2.3.16+)
-- Newtonsoft Json (2.0.2+)
-- Unitask
-- VContainer (dependency injection)
+- Newtonsoft Json (2.0.2+) (Packages/manifest.json: "com.unity.nuget.newtonsoft-json": "2.0.2")
+- Unitask (https://github.com/Cysharp/UniTask)
+- VContainer (dependency injection - https://vcontainer.hadashikick.jp/getting-started/installation)
 
 ### Step 2: Install Core Framework
 
@@ -59,7 +59,7 @@ The package requires the following Unity packages:
 **Option B: Manual Installation**
 
 1. Find folder `your_project\Packages\`, then open file `manifest.json`
-2. add "com.maktrung.core" : "https://github.com/trungmk/unity_casual_template.git#master" into  `manifest.json` file.
+2. add "com.maktrung.core" : "https://github.com/trungmk/unity_casual_template.git#master" to  `Packages/manifest.json`.
 3. The package will be automatically detected by Unity
 
 ---
@@ -179,9 +179,6 @@ Addressables-based asset loading and management system.
 // Load a single asset
 var texture = await assetManager.LoadAssetAsync<Texture2D>("MyTexture");
 
-// Load multiple assets by label
-var audioClips = await assetManager.LoadAssetsAsyncByLabel<AudioClip>("Music");
-
 // Instantiate with DI injection
 var instance = await assetManager.InstantiateWithInjectAsync("PlayerPrefab");
 ```
@@ -199,16 +196,17 @@ View-based UI system with stacking, caching, and lifecycle management.
 **Usage:**
 ```csharp
 // Show a UI view
-uiManager.Show<MainMenuPanel>(mainMenuData)
+uiManager.Show<MainMenuPanel>()
          .OnShowCompleted(view => {
-
+            MainMenuPanel mainMenuPanel = view as MainMenuPanel;
          });
+
+// Show with parameters
+uiManager.Show<MainMenuPanel>(playerData, itemList);
 
 // Hide a view
 uiManager.Hide<MainMenuPanel>();
 
-// Show with parameters
-uiManager.Show<MainMenuPanel>(playerData, itemList);
 ```
 
 ### CoreSceneManager
@@ -410,16 +408,28 @@ public class PlayerLevelUpEvent : IGameEvent
 {
     public int NewLevel { get; set; }
     public int ExperienceGained { get; set; }
+
+    public static PlayerLevelUpEvent GetInstance()
+    {
+        return _instance;
+    }
+   
+    public void Reset()
+    {
+        NewLevel = 0;
+        ExperienceGained = 0;
+    }
 }
 
 // Publishing events
 public class PlayerController : MonoBehaviour
 {
+    [Inject]
     private IEventManager eventManager;
     
     public void LevelUp()
     {
-        eventManager.Publish(new PlayerLevelUpEvent 
+        eventManager.Dispatch<PlayerLevelUpEvent>(new PlayerLevelUpEvent 
         { 
             NewLevel = currentLevel + 1,
             ExperienceGained = 1000
@@ -430,11 +440,17 @@ public class PlayerController : MonoBehaviour
 // Subscribing to events
 public class UIController : MonoBehaviour
 {
+    [Inject]
     private IEventManager eventManager;
-    
-    private void Start()
+
+    private void OnEnable()
     {
-        eventManager.Subscribe<PlayerLevelUpEvent>(OnPlayerLevelUp);
+         eventManager.AddListener<PlayerLevelUpEvent>(OnPlayerLevelUp);
+    }
+
+    private void OnEnable()
+    {
+         eventManager.RemoveListener<PlayerLevelUpEvent>(OnPlayerLevelUp);
     }
     
     private void OnPlayerLevelUp(PlayerLevelUpEvent eventData)
@@ -457,65 +473,22 @@ public class ProjectileSystem : MonoBehaviour
         objectPooling = pooling;
     }
     
-    public void FireProjectile()
+    public async void FireProjectile()
     {
         // Get projectile from pool
-        var projectile = objectPooling.Get("Bullet");
+        var projectile = await objectPooling.Get("Bullet"); 
         
         // Configure and fire
         projectile.transform.position = firePoint.position;
         projectile.GetComponent<Projectile>().Fire(target);
+
+        // Or
+        Projectile projectile = await objectPooling.Get<Projectile>("Bullet"); 
     }
 }
 ```
 
 ---
-
-## Best Practices
-
-### Performance
-- Use object pooling for frequently created/destroyed objects
-- Leverage async/await for asset loading
-- Cache references to avoid repeated GetComponent calls
-- Save critical data on pause, not just on quit
-
-### Memory Management
-- Release asset handles when no longer needed
-- Use WeakReference for cached objects when appropriate
-- Unsubscribe from events in OnDestroy/OnDisable
-
-### Error Handling
-- Always check for null references in lifecycle methods
-- Use try-catch blocks for asset loading operations
-- Implement fallback behaviors for missing assets
-- Log meaningful error messages with context
-
----
-
-## API Reference
-
-### Core Interfaces
-
-- `IAssetManager`: Asset loading and management
-- `IAudioManager`: Audio playback and control
-- `IUIManager`: UI view management
-- `ISceneManager`: Scene loading and transitions
-- `IGameDataManager`: Game data and persistence
-- `IObjectPooling`: Object pooling and reuse
-- `IEventManager`: Event publishing and subscription
-
-### Key Classes
-
-- `GameHub`: Main framework coordinator
-- `BaseSystem`: Base class for all game systems
-- `SceneController`: Base class for scene-specific logic
-- `StartupTaskBase`: Base class for initialization tasks
-- `BaseView`: Base class for UI views
-
-For detailed API documentation, see the inline XML documentation in the source code.
-
----
-
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
